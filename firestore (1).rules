@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || role() in ['owner','admin','teacher']);
+      allow write: if isSignedIn() && role() in ['owner','admin'];
+    }
+    match /students/{id} {
+      allow read: if isSignedIn() && (role() in ['owner','admin'] || (role()=='teacher' && resource.data.batch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.batches) || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid));
+      allow write: if isSignedIn() && role() in ['owner','admin','teacher'];
+    }
+    match /fees/{id} { allow read: if isSignedIn() && (role() in ['owner','admin','teacher'] || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid)); allow write: if isSignedIn() && role() in ['owner','admin']; }
+    match /attendance/{id} { allow read: if isSignedIn() && (role() in ['owner','admin','teacher'] || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid)); allow write: if isSignedIn() && role() in ['owner','admin','teacher']; }
+    match /tests/{id} { allow read: if isSignedIn(); allow write: if isSignedIn() && role() in ['owner','admin','teacher']; }
+    match /auditLogs/{id} { allow read: if isSignedIn() && role() in ['owner','admin']; allow create: if isSignedIn(); }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
