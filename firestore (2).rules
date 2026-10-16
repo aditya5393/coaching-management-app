@@ -1,0 +1,97 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function getUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function userRole() {
+      return getUser().role;
+    }
+    function userCoachingId() {
+      return getUser().coachingId;
+    }
+    function isSuperAdmin() {
+      return isSignedIn() && userRole() == 'super-admin';
+    }
+    function isOwnerOrAdmin() {
+      return isSignedIn() && userRole() in ['owner', 'admin'];
+    }
+    function sameCoaching() {
+      return resource.data.coachingId == userCoachingId();
+    }
+    function sameCoachingForCreate() {
+      return request.resource.data.coachingId == userCoachingId();
+    }
+    function staffWrite() {
+      return isSignedIn() && userRole() in ['owner', 'admin', 'teacher'];
+    }
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin() || (isOwnerOrAdmin() && resource.data.coachingId == userCoachingId()));
+      allow delete: if isSuperAdmin();
+    }
+    match /coachings/{coachingId} {
+      allow read: if isSignedIn() && (isSuperAdmin() || userCoachingId() == coachingId);
+      allow create: if isSignedIn() && userRole() in ['owner', 'admin'] && request.resource.data.coachingId == coachingId;
+      allow update: if isSignedIn() && (isSuperAdmin() || (isOwnerOrAdmin() && userCoachingId() == coachingId));
+      allow delete: if isSuperAdmin();
+    }
+    match /students/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && (userRole() in ['owner', 'admin', 'teacher'] || (userRole() == 'student' && resource.data.uid == request.auth.uid) || (userRole() == 'parent' && resource.data.parentUid == request.auth.uid))));
+      allow create: if staffWrite() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /fees/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && (userRole() in ['owner', 'admin', 'teacher'] || (userRole() == 'student' && resource.data.uid == request.auth.uid) || (userRole() == 'parent' && resource.data.parentUid == request.auth.uid))));
+      allow create: if isOwnerOrAdmin() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && isOwnerOrAdmin()));
+    }
+    match /bills/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && (userRole() in ['owner', 'admin', 'teacher'] || (userRole() == 'student' && resource.data.uid == request.auth.uid) || (userRole() == 'parent' && resource.data.parentUid == request.auth.uid))));
+      allow create: if isOwnerOrAdmin() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && isOwnerOrAdmin()));
+    }
+    match /attendance/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && (userRole() in ['owner', 'admin', 'teacher'] || (userRole() == 'student' && resource.data.uid == request.auth.uid) || (userRole() == 'parent' && resource.data.parentUid == request.auth.uid))));
+      allow create: if staffWrite() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /tests/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher', 'student', 'parent']));
+      allow create: if staffWrite() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /notices/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher', 'student', 'parent']));
+      allow create: if staffWrite() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /batches/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher', 'student', 'parent']));
+      allow create: if isOwnerOrAdmin() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && isOwnerOrAdmin()));
+    }
+    match /doubts/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher', 'student', 'parent']));
+      allow create: if isSignedIn() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /plans/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher', 'student', 'parent']));
+      allow create: if staffWrite() && sameCoachingForCreate();
+      allow update, delete: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && userRole() in ['owner', 'admin', 'teacher']));
+    }
+    match /auditLogs/{id} {
+      allow read: if isSignedIn() && (isSuperAdmin() || (sameCoaching() && isOwnerOrAdmin()));
+      allow create: if isSignedIn() && sameCoachingForCreate();
+      allow update, delete: if isSuperAdmin();
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
