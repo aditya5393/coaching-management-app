@@ -1,0 +1,196 @@
+<!doctype html><html lang="hi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Coaching Management App</title><meta name="theme-color" content="#6d28d9"><meta name="description" content="Coaching Management App — Student + Owner Dashboard, Fees, Attendance, Tests"><script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script><style>*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f3f0ff;color:#1f2937}header{position:sticky;top:0;z-index:5;background:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 12px rgba(0,0,0,.06)}header b{font-size:18px}header b span{color:#6d28d9}.wrap{max-width:920px;margin:0 auto;padding:14px 12px 90px}.card{background:#fff;border-radius:16px;padding:16px;box-shadow:0 4px 18px rgba(0,0,0,.06);margin-bottom:14px}.card h2{margin:0 0 10px;font-size:17px}.card h3{margin:12px 0 8px;font-size:15px}.muted{color:#6b7280;font-size:13px}.big{font-size:28px;font-weight:800}.small{font-size:12px;color:#6b7280}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}@media(max-width:560px){.grid3{grid-template-columns:1fr 1fr}}.kpi{background:#f8f5ff;border-radius:14px;padding:12px}.kpi b{font-size:22px;display:block}label{display:block;font-size:13px;font-weight:600;margin:10px 0 4px}input,select,textarea{width:100%;padding:12px;border:1px solid #e5e7eb;border-radius:12px;font-size:15px;background:#fff}button{width:100%;padding:13px;border:0;border-radius:12px;background:#6d28d9;color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:10px}button.sec{background:#fff;color:#111;border:1px solid #e5e7eb}button.green{background:#059669}button.amber{background:#d97706}button.small{width:auto;padding:8px 12px;font-size:13px;margin:4px 4px 0 0}.row{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;background:#ede9fe;color:#4c1d95;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700}.pill.green{background:#d1fae5;color:#065f46}.pill.red{background:#fee2e2;color:#991b1b}.pill.amber{background:#fef3c7;color:#92400e}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid #eee;text-align:left}.qr{border:2px dashed #6d28d9;border-radius:14px;padding:16px;text-align:center;background:#f8f5ff}.qr .box{font-size:42px}.tabs{position:fixed;left:0;right:0;bottom:0;background:#fff;display:flex;border-top:1px solid #eee;z-index:5}.tabs button{flex:1;background:#fff;color:#6b7280;border:0;border-radius:0;margin:0;padding:12px 4px;font-size:12px}.tabs button.on{color:#6d28d9;font-weight:800;border-top:3px solid #6d28d9}.hidden{display:none!important}.notice{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:10px;margin:6px 0}pre{white-space:pre-wrap;background:#111827;color:#e5e7eb;padding:12px;border-radius:12px;font-size:12px;overflow:auto}.demo{background:#fef3c7;border:1px solid #f59e0b;border-radius:12px;padding:10px;font-size:13px;margin-bottom:12px}.flex{display:flex;justify-content:space-between;align-items:center;gap:10px}.bar{height:10px;background:#eee;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#6d28d9}img.preview{max-width:100%;border-radius:12px;margin-top:8px}</style></head><body>
+<header><b>📚 Coaching<span>OS</span></b><span><span id="whoLine" class="muted"></span> <button class="small sec" id="logoutBtn" style="display:none">Logout</button></span></header>
+<div class="wrap">
+<div class="demo"><b>DEMO FRONTEND — production needs Firebase Auth + Firestore + Security Rules.</b><br>Ye build localStorage demo hai. Real production me roles / invite codes server-side (Firebase) se enforce honge, frontend hiding se nahi. Invite codes kabhi hardcode mat karo — server-side banao.</div>
+
+<!-- LOGIN ONLY GATE -->
+<section id="loginScreen" class="card"><h2>Login — Sirf Login Page</h2><p class="muted">Private PWA link: bina login ke koi dashboard / data nahi dikhega. Google Sign-In production me yahan aayega. Demo me naam + email + invite code se login karo.</p>
+<label>Naam</label><input id="loginName" placeholder="Apna naam">
+<label>Email</label><input id="loginEmail" placeholder="email@example.com" type="email">
+<label>Invite Code</label><input id="loginCode" placeholder="Invite code daalo (koi demo code screen pe nahi dikhaya gaya)">
+<label>Demo Role (sirf demo ke liye)</label><select id="loginRole"><option value="student">Student</option><option value="teacher">Teacher</option><option value="owner">Owner</option><option value="parent">Parent</option></select>
+<label>Demo: Kaunsa student / bachha? (Student / Parent ke liye)</label><select id="loginStudent"></select>
+<button id="loginBtn">Login Karo</button><p id="loginMsg" class="muted"></p>
+<p class="muted">🔒 Invite code rule: 1 code = 1 device. Pehli baar jisme device pe use hoga, usi se bind ho jayega. Dusre device pe wahi code blocked dikhega.</p>
+<p class="muted">PWA Install: Browser menu → Add to Home Screen / Install App.</p></section>
+
+<div id="app" class="hidden">
+<!-- STUDENT -->
+<section id="tab-student" class="tabpage">
+<div class="card"><div class="flex"><div><div class="small">Target Exam Countdown</div><div class="big" id="countdown">—</div><div class="muted" id="countdownSub"></div></div><span class="pill" id="streakPill"></span></div>
+<label>Target Exam</label><select id="examSelect"><option>NEET</option><option>JEE</option><option>Board</option></select>
+<label>Exam Date</label><input type="date" id="examDate" value="2026-05-03"><button class="sec" onclick="saveExam()">Exam Date Save Karo</button></div>
+
+<div class="card"><h2>💰 Fees Remainder</h2><div class="grid"><div><div class="small">Pending Fees</div><div class="big" id="feePending">—</div></div><div><div class="small">Last Date</div><div class="big" style="font-size:18px" id="feeLast">—</div><div class="small">Total Fees</div><b id="feeTotal"></b></div></div>
+<h3>Fees History</h3><div id="feeHistory"></div>
+<div class="qr"><div>📷 UPI QR — Pay Karo</div><div class="box">▦▦</div><p class="muted">UPI ID: coaching@upi (demo) • QR placeholder — production me real UPI QR yahan aayega</p><button class="green" onclick="alert('Demo: Payment ke baad receipt Owner ko bhejo. Production me UPI callback se auto-update hoga.')">Maine Pay Kar Diya</button></div></div>
+
+<div class="card"><h2>📚 Modules & Study Material — Batch-wise</h2><div id="materialsList"></div></div>
+<div class="card"><h2>🗓️ Weekly Schedule</h2><div id="scheduleList"></div></div>
+<div class="card"><h2>🎉 Holiday Notice</h2><div id="holidayList"></div></div>
+<div class="card"><h2>📝 Test Schedule + Analysis</h2><div id="testList"></div><div id="testAnalysis"></div></div>
+<div class="card"><h2>✅ Meri Attendance</h2><div class="big" id="attPct">—</div><div id="attList"></div></div>
+<div class="card"><h2>🔥 Streak + Topper</h2><div id="topperList"></div></div>
+<div class="card"><h2>❓ Doubt Box — Photo ke Saath</h2><label>Doubt likho</label><textarea id="doubtText" placeholder="Apna doubt likho..."></textarea><label>Photo (optional)</label><input type="file" id="doubtPhoto" accept="image/*"><img id="doubtPreview" class="preview hidden"><button onclick="sendDoubt()">Doubt Bhejo</button><div id="doubtList"></div></div>
+</section>
+
+<!-- OWNER -->
+<section id="tab-owner" class="tabpage hidden">
+<div class="card"><h2>📊 Coaching Dashboard</h2><div class="grid3"><div class="kpi"><span class="small">Total Students</span><b id="kpiStudents">—</b></div><div class="kpi"><span class="small">Total Fees Received</span><b id="kpiReceived">—</b></div><div class="kpi"><span class="small">Pending Fees</span><b id="kpiPending">—</b></div><div class="kpi"><span class="small">Online Abhi</span><b id="kpiOnline">—</b></div><div class="kpi"><span class="small">Batches</span><b id="kpiBatches">—</b></div><div class="kpi"><span class="small">Avg Attendance</span><b id="kpiAtt">—</b></div></div><p class="muted">Live Online Count: demo me last-active se estimate. Production me Firebase presence se aayega.</p></div>
+
+<div class="card"><h2>👥 Batch Management</h2><div id="batchList"></div><label>Naya Batch</label><input id="newBatch" placeholder="Batch C"><button class="sec" onclick="addBatch()">Batch Banao</button></div>
+
+<div class="card"><h2>📖 Per Batch Syllabus Left</h2><div id="syllabusList"></div></div>
+
+<div class="card"><h2>🗓️ Per Day / Per Week Teaching Planner</h2><label>Aaj kya padhana hai? (Daily Plan)</label><input id="dailyPlan" placeholder="Aaj: Physics — Rotational Motion"><button class="sec" onclick="addPlan('daily')">Daily Plan Add Karo</button><label>Is hafte kya complete karna hai? (Weekly Plan)</label><input id="weeklyPlan" placeholder="Is hafte: Chemistry — Organic + 1 Test"><button class="sec" onclick="addPlan('weekly')">Weekly Plan Add Karo</button><div id="planList"></div></div>
+
+<div class="card"><h2>➕ Student Management — Student Add Karo</h2><label>Naam</label><input id="sName" placeholder="Student ka naam"><label>Phone</label><input id="sPhone" placeholder="98XXXXXXXX"><label>Batch</label><select id="sBatch"></select><label>Target Exam</label><select id="sExam"><option>NEET</option><option>JEE</option><option>Board</option></select><label>Total Fees (₹)</label><input id="sFees" type="number" value="12000"><button onclick="addStudent()">Student Add Karo</button><div id="studentList"></div></div>
+
+<div class="card"><h2>🧾 Fees Ledger + Receipt</h2><div id="ledgerList"></div><h3>Payment Add Karo</h3><label>Student</label><select id="payStudent"></select><label>Amount (₹)</label><input id="payAmount" type="number" placeholder="2000"><label>UTR</label><input id="payUTR" placeholder="UTR number"><label>Payment Date</label><input id="payDate" type="date"><button class="green" onclick="addPayment()">Payment Add + Receipt Dikhao</button><div id="receiptBox"></div></div>
+
+<div class="card"><h2>✅ Attendance Management + QR Attendance</h2><p class="muted">Printed QR classroom me: student khud scan karke 1 click me Present ho jayega. Teacher ko QR dikhane ki zarurat nahi.</p><div class="qr"><div>📷 CLASSROOM QR — Batch A</div><div class="box">▦▦▦</div><b>Batch Code: BATCH-A</b><p class="muted">Demo: neeche student select karke Mark Present dabao = scan jaisa hi.</p><label>Student (QR Scan Demo)</label><select id="qrStudent"></select><button class="green" onclick="qrPresent()">✅ QR Scan — Mark Present (5 sec)</button></div><div id="attendanceList"></div></div>
+
+<div class="card"><h2>📣 Notice Bhejo — Batch-wise WhatsApp</h2><label>Batch</label><select id="noticeBatch"></select><label>Notice</label><textarea id="noticeText" placeholder="Kal holiday hai / Test hai..."></textarea><button onclick="addNotice()">Notice Bhejo</button><div id="noticeList"></div></div>
+
+<div class="card"><h2>📝 Test Schedule Banao</h2><label>Test Naam</label><input id="testName" placeholder="NEET Mock Test 1"><label>Batch</label><select id="testBatch"></select><label>Date + Time</label><input id="testDate" type="datetime-local"><label>Syllabus</label><input id="testSyllabus" placeholder="Physics: Mechanics, Bio: Cell"><button onclick="addTest()">Test Banao</button></div>
+
+<div class="card"><h2>📁 Modules Upload — Batch-wise</h2><label>Batch</label><select id="moduleBatch"></select><label>Module / Notes naam</label><input id="moduleName" placeholder="Physics Notes Ch-5"><input type="file" id="moduleFile"><button class="sec" onclick="addMaterial()">Module Upload Karo (naam list me save hoga)</button></div>
+
+<div class="card"><h2>🔐 Role Change — ONLY Owner + Audit Log</h2><p class="muted">Student apna role khud nahi badal sakta. Sirf Owner yahan se badal sakta hai.</p><label>Kiska role badalna hai?</label><select id="roleUser"></select><label>Naya Role</label><select id="roleNew"><option value="student">Student</option><option value="teacher">Teacher</option><option value="parent">Parent</option><option value="admin">Admin</option></select><button class="amber" onclick="changeRole()">Role Change Karo (Audit Log me save hoga)</button><div id="auditList"></div>
+<h3>Temporary Role — Substitute Teacher (7 din, auto-expire)</h3><label>Naam</label><input id="tempName" placeholder="Substitute teacher naam"><button class="sec" onclick="addTempRole()">7 Din ka Temporary Access Do</button><div id="tempList"></div></div>
+</section>
+
+<!-- PARENT -->
+<section id="tab-parent" class="tabpage hidden">
+<div class="card"><h2>👨‍👩‍👧 Parent View — Sirf Apne Bachhe ka Data</h2><label>Bachha Select Karo</label><select id="parentChild" onchange="renderParent()"></select><div id="parentData"></div></div>
+<div class="card"><h2>📈 Analytics</h2><div id="analytics"></div><p class="muted">Churn note: jiska attendance / payment 2 hafte se ruka hai, wo churn-risk me dikhega (demo rule).</p></div>
+</section>
+
+<!-- SETTINGS -->
+<section id="tab-settings" class="tabpage hidden">
+<div class="card"><h2>⚙️ Settings — Export Yahin Hai</h2><p class="muted">Export Home Screen pe nahi hai — sirf Settings me.</p>
+<h3>Export</h3><button onclick="exportExcel()">📥 Download Excel (Owner) — SheetJS .xlsx</button><button class="sec" onclick="exportJSON()">📥 Download JSON (Backup)</button><p class="muted">Excel: Header bold + color, Columns Customer Name | Trip Name (=Batch) | Phone | Paid | Remaining | Total | Payment Date | UTR | Status, ₹ numbers, Dates DD-MM-YYYY, Last rows Totals, Sheet name = Report. Direct Excel / Google Sheets me khulega, koi manual import nahi.</p>
+<h3>Demo Data</h3><button class="sec" onclick="resetDemo()">🔄 Reset Demo Data</button>
+<h3>Device / Invite</h3><p class="muted" id="deviceInfo"></p>
+<h3>Developer / Firebase — Production ke liye</h3><p class="muted">Firebase config placeholder — apni real config yahan daalo, kabhi public repo me real keys mat daalo.</p><pre id="firebaseConfig"></pre><p class="muted">Firestore Security Rules — firestore.rules file me bhi hai. Copy karke Firebase Console → Firestore → Rules me paste karo.</p><pre id="rulesPre"></pre></div>
+<div class="card"><h2>ℹ️ 1 Month Free Trial + Backup</h2><p class="muted">Trial: 1 month free. Daily backup: production me Firebase + daily export se. Owner ka data lock-in nahi — Excel / JSON se kabhi bhi nikal sakta hai.</p></div>
+</section>
+</div>
+</div>
+<nav class="tabs hidden" id="bottomNav"><button data-tab="student" onclick="showTab('student')">👨‍🎓 Student</button><button data-tab="owner" onclick="showTab('owner')">🧑‍🏫 Coaching</button><button data-tab="parent" onclick="showTab('parent')">👨‍👩‍👧 Parent</button><button data-tab="settings" onclick="showTab('settings')">⚙️ Settings</button></nav>
+<script>
+const KEY='coachingOS_demo_v1';
+function deviceId(){let d=localStorage.getItem('coachingOS_device_id');if(!d){d='dev-'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem('coachingOS_device_id',d)}return d}
+function fmt(n){return '₹'+Number(n||0).toLocaleString('en-IN')}
+function ddmmyyyy(iso){if(!iso)return '';const d=new Date(iso);if(isNaN(d))return iso;return String(d.getDate()).padStart(2,'0')+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+d.getFullYear()}
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function demoData(){return{batches:['Batch A','Batch B'],students:[
+{id:'s1',name:'Aarav Sharma',phone:'9811111111',batch:'Batch A',exam:'NEET',total:12000,paid:8000,lastDate:'2026-10-25',att:92,streak:6,tests:[{name:'NEET Mock 1',marks:520,total:720,sub:{Physics:68,Chemistry:72,Biology:78},weak:'Physics — Rotational Motion'}],attendance:[{date:todayISO(),status:'Present'}]},
+{id:'s2',name:'Priya Verma',phone:'9822222222',batch:'Batch A',exam:'NEET',total:12000,paid:12000,lastDate:'2026-10-25',att:96,streak:7,tests:[{name:'NEET Mock 1',marks:610,total:720,sub:{Physics:82,Chemistry:85,Biology:88},weak:'Chemistry — Organic'}],attendance:[{date:todayISO(),status:'Present'}]},
+{id:'s3',name:'Rohan Gupta',phone:'9833333333',batch:'Batch B',exam:'JEE',total:15000,paid:6000,lastDate:'2026-10-28',att:78,streak:3,tests:[{name:'JEE Mock 1',marks:180,total:300,sub:{Physics:55,Maths:65,Chemistry:60},weak:'Maths — Calculus'}],attendance:[{date:todayISO(),status:'Absent'}]},
+{id:'s4',name:'Sneha Patel',phone:'9844444444',batch:'Batch B',exam:'JEE',total:15000,paid:9000,lastDate:'2026-10-28',att:85,streak:5,tests:[{name:'JEE Mock 1',marks:220,total:300,sub:{Physics:70,Maths:78,Chemistry:72},weak:'Physics — Thermodynamics'}],attendance:[{date:todayISO(),status:'Present'}]},
+{id:'s5',name:'Arjun Mehta',phone:'9855555555',batch:'Batch A',exam:'Board',total:10000,paid:4000,lastDate:'2026-11-05',att:70,streak:2,tests:[{name:'Board Test 1',marks:68,total:100,sub:{Physics:60,Maths:70,Chemistry:74},weak:'Physics — Optics'}],attendance:[{date:todayISO(),status:'Absent'}]}],
+payments:[{student:'Aarav Sharma',batch:'Batch A',phone:'9811111111',amount:8000,utr:'UTR1001',date:'2026-10-01'},{student:'Priya Verma',batch:'Batch A',phone:'9822222222',amount:12000,utr:'UTR1002',date:'2026-10-02'},{student:'Rohan Gupta',batch:'Batch B',phone:'9833333333',amount:6000,utr:'UTR1003',date:'2026-10-03'}],
+materials:[{batch:'Batch A',name:'Physics Notes — Mechanics (PDF)'},{batch:'Batch A',name:'Biology Module — Cell (PDF)'},{batch:'Batch B',name:'Maths Notes — Calculus (PDF)'},{batch:'Batch B',name:'Chemistry Module — Organic (PDF)'}],
+schedule:[{day:'Mon',sub:'Physics',time:'4:00–5:30 PM'},{day:'Tue',sub:'Chemistry',time:'4:00–5:30 PM'},{day:'Wed',sub:'Biology / Maths',time:'4:00–5:30 PM'},{day:'Thu',sub:'Physics',time:'4:00–5:30 PM'},{day:'Fri',sub:'Test + Doubt',time:'4:00–6:00 PM'},{day:'Sat',sub:'Revision',time:'10:00–12:00 PM'},{day:'Sun',sub:'Holiday / Self Study',time:'—'}],
+notices:[{batch:'All',text:'Diwali Holiday: 20 Oct ko koi class nahi hogi.',date:todayISO()},{batch:'Batch A',text:'NEET Mock Test — Sunday 10 AM.',date:todayISO()}],
+tests:[{name:'NEET Mock 1',batch:'Batch A',date:'2026-10-19T10:00',syllabus:'Physics: Mechanics, Bio: Cell'},{name:'JEE Mock 1',batch:'Batch B',date:'2026-10-20T10:00',syllabus:'Maths: Calculus, Physics: Thermo'}],
+plans:[{type:'daily',text:'Aaj: Physics — Rotational Motion (Batch A)'},{type:'weekly',text:'Is hafte: Chemistry — Organic + 1 Test (Batch B)'}],
+doubts:[{student:'Aarav Sharma',text:'Rotational motion ka torque wala doubt hai.',reply:'Teacher: Kal class me torque ke 3 examples karenge.',photo:''}],
+audit:[{who:'Owner',action:'Demo data loaded',when:new Date().toLocaleString()}],tempRoles:[],examDate:'2026-05-03',examName:'NEET',invite_claims:{}}}
+function load(){try{let d=JSON.parse(localStorage.getItem(KEY));if(!d||!d.students)throw 0;return d}catch(e){let d=demoData();localStorage.setItem(KEY,JSON.stringify(d));return d}}
+let DB=load();let SESSION=null;
+function save(){localStorage.setItem(KEY,JSON.stringify(DB));renderAll()}
+function resetDemo(){localStorage.removeItem(KEY);DB=load();alert('Demo data reset ho gaya.');location.reload()}
+function esc(s){return String(s||'').replace(/</g,'&lt;')}
+function currentStudent(){let id=document.getElementById('loginStudent').value;return DB.students.find(s=>s.id===id)||DB.students[0]}
+function showTab(t){document.querySelectorAll('.tabpage').forEach(e=>e.classList.add('hidden'));document.getElementById('tab-'+t).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));renderAll()}
+function fillSelects(){let opts=DB.students.map(s=>`<option value="${s.id}">${esc(s.name)} — ${s.batch}</option>`).join('');['loginStudent','payStudent','qrStudent','parentChild','roleUser'].forEach(id=>{let el=document.getElementById(id);if(el)el.innerHTML=opts});let bOpts=DB.batches.map(b=>`<option>${b}</option>`).join('');['sBatch','noticeBatch','testBatch','moduleBatch'].forEach(id=>{let el=document.getElementById(id);if(el)el.innerHTML=bOpts});}
+function renderAll(){if(!SESSION)return;fillSelects();let st=currentStudent();if(!st)return;
+let examD=new Date(DB.examDate||'2026-05-03');let diff=Math.ceil((examD-new Date())/86400000);document.getElementById('countdown').textContent=(diff>=0?diff+' din bache hain':'Exam date aa gayi');document.getElementById('countdownSub').textContent=(DB.examName||'NEET')+' • '+ddmmyyyy(DB.examDate);document.getElementById('streakPill').textContent='🔥 '+st.streak+' din streak';
+document.getElementById('feePending').textContent=fmt(st.total-st.paid);document.getElementById('feeLast').textContent=ddmmyyyy(st.lastDate);document.getElementById('feeTotal').textContent=fmt(st.total)+' • Paid '+fmt(st.paid);
+document.getElementById('feeHistory').innerHTML=DB.payments.filter(p=>p.student===st.name).map(p=>`<div class="flex"><span>${ddmmyyyy(p.date)} • UTR ${esc(p.utr)}</span><b>${fmt(p.amount)}</b></div>`).join('')||'<p class="muted">Koi payment history nahi.</p>';
+document.getElementById('materialsList').innerHTML=DB.materials.filter(m=>m.batch===st.batch).map(m=>`<div>📄 ${esc(m.name)} <span class="pill">${m.batch}</span></div>`).join('');
+document.getElementById('scheduleList').innerHTML=DB.schedule.map(s=>`<div class="flex"><b>${s.day} — ${s.sub}</b><span>${s.time}</span></div>`).join('');
+document.getElementById('holidayList').innerHTML=DB.notices.map(n=>`<div class="notice">🎉 ${esc(n.text)} <div class="muted">${n.batch} • ${ddmmyyyy(n.date)}</div></div>`).join('');
+document.getElementById('testList').innerHTML=DB.tests.filter(t=>t.batch===st.batch).map(t=>`<div><b>${esc(t.name)}</b> — ${ddmmyyyy(t.date)} • ${esc(t.syllabus)}</div>`).join('')||'<p class="muted">Koi upcoming test nahi.</p>';
+let lt=st.tests&&st.tests[0];document.getElementById('testAnalysis').innerHTML=lt?`<h3>Test Analysis — ${esc(lt.name)}</h3><p>Marks: <b>${lt.marks}/${lt.total}</b> • ${Math.round(lt.marks/lt.total*100)}%</p><p>Subject-wise: ${Object.entries(lt.sub).map(([k,v])=>k+' '+v+'%').join(' • ')}</p><p>Weak Topic: <b class="pill red">${esc(lt.weak)}</b></p>`:'';
+document.getElementById('attPct').textContent=st.att+'% Present';document.getElementById('attList').innerHTML=(st.attendance||[]).map(a=>`<div>${ddmmyyyy(a.date)} — ${a.status}</div>`).join('');
+let sorted=[...DB.students].filter(s=>s.batch===st.batch).sort((a,b)=>b.att-a.att);document.getElementById('topperList').innerHTML='<h3>Top 3 — '+st.batch+'</h3>'+sorted.slice(0,3).map((s,i)=>`<div>${i+1}. ${esc(s.name)} — ${s.att}% • 🔥 ${s.streak} din</div>`).join('');
+document.getElementById('doubtList').innerHTML=DB.doubts.map(d=>`<div class="card" style="box-shadow:none;border:1px solid #eee"><b>${esc(d.student)}:</b> ${esc(d.text)}${d.photo?`<img src="${d.photo}" class="preview">`:''}<p class="muted">Teacher reply: ${esc(d.reply||'Abhi reply nahi aaya — teacher jaldi reply karega.')}</p></div>`).join('');
+// Owner KPIs
+let rec=DB.students.reduce((a,s)=>a+s.paid,0),tot=DB.students.reduce((a,s)=>a+s.total,0);document.getElementById('kpiStudents').textContent=DB.students.length;document.getElementById('kpiReceived').textContent=fmt(rec);document.getElementById('kpiPending').textContent=fmt(tot-rec);document.getElementById('kpiOnline').textContent=Math.max(1,Math.round(DB.students.length*0.6))+' online';document.getElementById('kpiBatches').textContent=DB.batches.length;document.getElementById('kpiAtt').textContent=Math.round(DB.students.reduce((a,s)=>a+s.att,0)/DB.students.length)+'%';
+document.getElementById('batchList').innerHTML=DB.batches.map(b=>{let ss=DB.students.filter(s=>s.batch===b);let p=ss.filter(s=>s.paid>=s.total).length;return `<div class="flex"><b>${b}</b><span>${ss.length} students • ${p} paid • ${ss.length-p} pending • ${fmt(ss.reduce((a,s)=>a+s.paid,0))} received / ${fmt(ss.reduce((a,s)=>a+s.total-ss.paid,0))} baki</span></div>`}).join('');
+document.getElementById('syllabusList').innerHTML=DB.batches.map(b=>`<div><b>${b}</b><p class="muted">Physics 40% left • Chemistry 35% left • Bio/Maths 30% left (demo)</p><div class="bar"><i style="width:65%"></i></div><span class="small">65% complete</span></div>`).join('');
+document.getElementById('planList').innerHTML=DB.plans.map(p=>`<div><span class="pill">${p.type}</span> ${esc(p.text)}</div>`).join('');
+document.getElementById('studentList').innerHTML=DB.students.map(s=>`<div class="flex"><span><b>${esc(s.name)}</b> • ${s.batch} • ${s.exam} • ${esc(s.phone)}</span><span>${fmt(s.paid)}/${fmt(s.total)} • ${s.att}%</span></div>`).join('');
+document.getElementById('ledgerList').innerHTML=DB.payments.map(p=>`<div class="flex"><span>${esc(p.student)} • ${p.batch} • ${ddmmyyyy(p.date)} • UTR ${esc(p.utr)}</span><b>${fmt(p.amount)}</b></div>`).join('');
+document.getElementById('attendanceList').innerHTML=DB.students.map(s=>`<div class="flex"><span>${esc(s.name)} — ${s.batch}</span><span>${(s.attendance&&s.attendance[0]&&s.attendance[0].status)||'—'}</span></div>`).join('');
+document.getElementById('noticeList').innerHTML=DB.notices.map(n=>`<div class="notice">${esc(n.text)} <div class="muted">${n.batch} • <a href="https://wa.me/?text=${encodeURIComponent(n.text)}" target="_blank" rel="noopener">WhatsApp pe bhejo ↗</a></div></div>`).join('');
+document.getElementById('auditList').innerHTML='<h3>Audit Log — Role Changes</h3>'+DB.audit.map(a=>`<div class="muted">${esc(a.when)} — ${esc(a.who)}: ${esc(a.action)}</div>`).join('');
+document.getElementById('tempList').innerHTML=DB.tempRoles.map(t=>`<div>${esc(t.name)} — expires ${ddmmyyyy(t.expires)} ${new Date(t.expires)<new Date()?'<span class="pill red">EXPIRED</span>':'<span class="pill green">ACTIVE</span>'}</div>`).join('');
+document.getElementById('analytics').innerHTML=DB.batches.map(b=>{let ss=DB.students.filter(s=>s.batch===b);let rec2=ss.reduce((a,s)=>a+s.paid,0),cost=ss.length*2000;return `<div><b>${b}</b>: Received ${fmt(rec2)} • Est. Cost ${fmt(cost)} • Profit ${fmt(rec2-cost)} ${rec2-cost>0?'🟢 Profit me':'🔴 Loss'}</div>`}).join('')+'<p>Churn-risk: '+DB.students.filter(s=>s.att<75).map(s=>s.name).join(', ')+' (attendance &lt; 75%)</p>';
+document.getElementById('deviceInfo').textContent='Device ID (is browser): '+deviceId()+' • Invite code is device se bind hai.';
+document.getElementById('firebaseConfig').textContent='const firebaseConfig = {\n  apiKey: "YOUR_API_KEY",\n  authDomain: "YOUR_PROJECT.firebaseapp.com",\n  projectId: "YOUR_PROJECT_ID",\n  storageBucket: "YOUR_PROJECT.appspot.com",\n  messagingSenderId: "YOUR_SENDER_ID",\n  appId: "YOUR_APP_ID"\n};\n// Production: Firebase Auth (Google) + Firestore. localStorage sirf demo hai.';
+document.getElementById('rulesPre').textContent=document.getElementById('rulesHidden').textContent;
+renderParent();
+}
+function renderParent(){let el=document.getElementById('parentChild');if(!el||!el.value)return;let st=DB.students.find(s=>s.id===el.value)||DB.students[0];document.getElementById('parentData').innerHTML=`<p><b>${esc(st.name)}</b> • ${st.batch} • ${st.exam}</p><p>Fees: Paid ${fmt(st.paid)} / Total ${fmt(st.total)} • Baki ${fmt(st.total-st.paid)} • Last Date ${ddmmyyyy(st.lastDate)}</p><p>Attendance: ${st.att}%</p><p>Last Test: ${st.tests[0]?st.tests[0].name+' — '+st.tests[0].marks+'/'+st.tests[0].total+' • Weak: '+st.tests[0].weak:''}</p>`}
+function saveExam(){DB.examDate=document.getElementById('examDate').value;DB.examName=document.getElementById('examSelect').value;save();alert('Exam date save ho gayi.')}
+function addBatch(){let v=document.getElementById('newBatch').value.trim();if(!v)return alert('Batch naam daalo');DB.batches.push(v);save();alert('Batch ban gaya.')}
+function addPlan(type){let v=type==='daily'?document.getElementById('dailyPlan').value:document.getElementById('weeklyPlan').value;if(!v.trim())return alert('Plan likho');DB.plans.push({type,text:v});save();}
+function addStudent(){let n=document.getElementById('sName').value.trim();if(!n)return alert('Naam daalo');let s={id:'s'+Date.now(),name:n,phone:document.getElementById('sPhone').value||'',batch:document.getElementById('sBatch').value,exam:document.getElementById('sExam').value,total:Number(document.getElementById('sFees').value||0),paid:0,lastDate:'2026-11-05',att:100,streak:0,tests:[],attendance:[]};DB.students.push(s);save();alert('Student add ho gaya.')}
+function addPayment(){let sid=document.getElementById('payStudent').value;let st=DB.students.find(s=>s.id===sid);let amt=Number(document.getElementById('payAmount').value||0);if(!st||!amt)return alert('Student + amount daalo');let utr=document.getElementById('payUTR').value||('UTR'+Date.now());let date=document.getElementById('payDate').value||todayISO();st.paid+=amt;DB.payments.push({student:st.name,batch:st.batch,phone:st.phone,amount:amt,utr,date});save();document.getElementById('receiptBox').innerHTML=`<div class="card" style="border:1px solid #059669"><b>🧾 Receipt</b><p>${esc(st.name)} • ${st.batch}</p><p>Amount: ${fmt(amt)} • UTR: ${esc(utr)} • Date: ${ddmmyyyy(date)}</p><p>Total Paid: ${fmt(st.paid)} / ${fmt(st.total)}</p></div>`}
+function qrPresent(){let sid=document.getElementById('qrStudent').value;let st=DB.students.find(s=>s.id===sid);if(!st)return;st.attendance=[{date:todayISO(),status:'Present'},...(st.attendance||[])];save();alert(st.name+' Present mark ho gaya ✅')}
+function addNotice(){let t=document.getElementById('noticeText').value.trim();if(!t)return alert('Notice likho');DB.notices.unshift({batch:document.getElementById('noticeBatch').value,text:t,date:todayISO()});save();}
+function addTest(){let n=document.getElementById('testName').value.trim();if(!n)return alert('Test naam daalo');DB.tests.push({name:n,batch:document.getElementById('testBatch').value,date:document.getElementById('testDate').value,syllabus:document.getElementById('testSyllabus').value});save();alert('Test ban gaya.')}
+function addMaterial(){let n=document.getElementById('moduleName').value.trim()||(document.getElementById('moduleFile').files[0]&&document.getElementById('moduleFile').files[0].name)||'Module';DB.materials.push({batch:document.getElementById('moduleBatch').value,name:n});save();alert('Module upload ho gaya (demo: naam list me save).')}
+function changeRole(){if(!SESSION||SESSION.role!=='owner')return alert('Sirf Owner role change kar sakta hai.');let sid=document.getElementById('roleUser').value;let st=DB.students.find(s=>s.id===sid);DB.audit.push({who:SESSION.name||'Owner',action:'Role changed for '+st.name+' -> '+document.getElementById('roleNew').value,when:new Date().toLocaleString()});save();alert('Role change + audit log me save ho gaya.')}
+function addTempRole(){let n=document.getElementById('tempName').value.trim();if(!n)return alert('Naam daalo');let d=new Date();d.setDate(d.getDate()+7);DB.tempRoles.push({name:n,expires:d.toISOString().slice(0,10)});DB.audit.push({who:SESSION.name||'Owner',action:'Temporary 7-day role given to '+n,when:new Date().toLocaleString()});save();alert('7 din ka temporary access de diya — auto-expire hoga.')}
+function sendDoubt(){let t=document.getElementById('doubtText').value.trim();if(!t)return alert('Doubt likho');let st=currentStudent();DB.doubts.unshift({student:st.name,text:t,reply:'',photo:document.getElementById('doubtPreview').src&&!document.getElementById('doubtPreview').classList.contains('hidden')?document.getElementById('doubtPreview').src:''});save();alert('Doubt bhej diya — teacher reply karega.')}
+document.getElementById('doubtPhoto').addEventListener('change',e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{let img=document.getElementById('doubtPreview');img.src=r.result;img.classList.remove('hidden')};r.readAsDataURL(f)});
+document.getElementById('loginBtn').addEventListener('click',()=>{
+let name=document.getElementById('loginName').value.trim(),email=document.getElementById('loginEmail').value.trim(),code=document.getElementById('loginCode').value.trim(),role=document.getElementById('loginRole').value;
+if(!name||!email||!code)return document.getElementById('loginMsg').textContent='Naam + Email + Invite Code teeno bharo.';
+let dev=deviceId();let claims=DB.invite_claims||{};if(claims[code]&&claims[code]!==dev){document.getElementById('loginMsg').textContent='❌ Ye invite code pehle se kisi aur device pe use ho chuka hai. 1 code = 1 device. Naya code maango.';return}
+claims[code]=dev;DB.invite_claims=claims;save();SESSION={name,email,role,studentId:document.getElementById('loginStudent').value};
+document.getElementById('loginScreen').classList.add('hidden');document.getElementById('app').classList.remove('hidden');document.getElementById('bottomNav').classList.remove('hidden');document.getElementById('logoutBtn').style.display='inline-block';document.getElementById('whoLine').textContent=name+' • '+role;
+// Role-based tabs: student -> student+settings only, parent -> parent+settings, teacher/owner -> all
+let allowed=role==='student'?['student','settings']:role==='parent'?['parent','settings']:['student','owner','parent','settings'];
+document.querySelectorAll('.tabs button').forEach(b=>{b.style.display=allowed.includes(b.dataset.tab)?'':'none'});showTab(allowed[0]);});
+document.getElementById('logoutBtn').addEventListener('click',()=>{SESSION=null;location.reload()});
+function exportJSON(){let blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='coaching-backup.json';a.click()}
+function exportExcel(){
+if(typeof XLSX==='undefined')return alert('SheetJS load nahi hua — internet check karo. Export via JSON try karo.');
+let rows=DB.payments.map(p=>{let st=DB.students.find(s=>s.name===p.student);let total=st?st.total:p.amount,paid=p.amount;return{'Customer Name':p.student,'Trip Name':p.batch,'Phone':p.phone,'Paid':paid,'Remaining':Math.max(0,total-paid),'Total':total,'Payment Date':ddmmyyyy(p.date),'UTR':p.utr,'Status':paid>=total?'Paid':'Pending'}});
+let totalPaid=rows.reduce((a,r)=>a+r.Paid,0),totalRem=rows.reduce((a,r)=>a+r.Remaining,0),totalTot=rows.reduce((a,r)=>a+r.Total,0);
+rows.push({'Customer Name':'TOTAL','Trip Name':'','Phone':'','Paid':totalPaid,'Remaining':totalRem,'Total':totalTot,'Payment Date':'','UTR':'','Status':''});
+let ws=XLSX.utils.json_to_sheet(rows);ws['!cols']=[{wch:22},{wch:16},{wch:14},{wch:14},{wch:14},{wch:14},{wch:15},{wch:16},{wch:12}];
+let range=XLSX.utils.decode_range(ws['!ref']);for(let c=range.s.c;c<=range.e.c;c++){let cell=XLSX.utils.encode_cell({r:0,c});if(ws[cell]){ws[cell].s={font:{bold:true,color:{rgb:'FFFFFF'}},fill:{fgColor:{rgb:'6D28D9'}},alignment:{horizontal:'center'}}}}
+for(let r=1;r<=range.e.r;r++){for(let c=3;c<=5;c++){let cell=XLSX.utils.encode_cell({r,c});if(ws[cell])ws[cell].z='"₹"#,##0'}}
+let wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Report');XLSX.writeFile(wb,'coaching-report.xlsx');
+}
+// PWA: manifest via blob + SW attempt guarded
+try{let manifest={name:'Coaching Management App',short_name:'CoachingOS',start_url:'.',display:'standalone',background_color:'#ffffff',theme_color:'#6d28d9',icons:[]};let blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});let link=document.createElement('link');link.rel='manifest';link.href=URL.createObjectURL(blob);document.head.appendChild(link);if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{})}}catch(e){}
+fillSelects();
+</script><pre id="rulesHidden" style="display:none">rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function role() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    match /users/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || role() in ['owner','admin','teacher']);
+      allow write: if isSignedIn() && role() in ['owner','admin'];
+    }
+    match /students/{id} {
+      allow read: if isSignedIn() && (role() in ['owner','admin'] || (role()=='teacher' && resource.data.batch in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.batches) || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid));
+      allow write: if isSignedIn() && role() in ['owner','admin','teacher'];
+    }
+    match /fees/{id} { allow read: if isSignedIn() && (role() in ['owner','admin','teacher'] || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid)); allow write: if isSignedIn() && role() in ['owner','admin']; }
+    match /attendance/{id} { allow read: if isSignedIn() && (role() in ['owner','admin','teacher'] || (role()=='student' && resource.data.uid==request.auth.uid) || (role()=='parent' && resource.data.parentUid==request.auth.uid)); allow write: if isSignedIn() && role() in ['owner','admin','teacher']; }
+    match /tests/{id} { allow read: if isSignedIn(); allow write: if isSignedIn() && role() in ['owner','admin','teacher']; }
+    match /auditLogs/{id} { allow read: if isSignedIn() && role() in ['owner','admin']; allow create: if isSignedIn(); }
+    match /{document=**} { allow read, write: if false; }
+  }
+}
+</pre></body></html>
